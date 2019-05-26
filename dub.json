@@ -1,0 +1,9 @@
+{
+	"name": "THTSim",
+	"authors": [
+		"Kadin Tucker"
+	],
+	"description": "A simulation of human societies based on climate",
+	"copyright": "Copyright © 2019, Kadin Tucker",
+	"license": "proprietary"
+}
