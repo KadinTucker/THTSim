@@ -10,6 +10,25 @@ struct Technology {
     double woodwork; ///Develops from more vegetated areas, allows for faster population growth and movement over oceans
     double warfare; ///Develops from clashing cultures, allows for more effective fighting and boosts other technology
 
+    /**
+     * Adds part of another technology to this one
+     * Does not add if this technology is more advanced
+     */
+    void add(Technology other, double amount) {
+        if(this.metalwork < other.metalwork) {
+            this.metalwork = amount * (other.metalwork - this.metalwork)
+        }
+        if(this.husbandry < other.husbandry) {
+            this.husbandry = amount * (other.husbandry - this.husbandry)
+        }
+        if(this.woodwork < other.woodwork) {
+            this.woodwork = amount * (other.woodwork - this.woodwork)
+        }
+        if(this.warfare < other.warfare) {
+            this.warfare = amount * (other.warfare - this.warfare)
+        }
+    }
+
 }
 
 /**
@@ -61,7 +80,6 @@ class Tile {
      * Develops the technology on this tile
      * Technology develops as a baseline,
      * then also slowly equalizes other technology types
-     * TODO: implement technology spreading based on migration/conflict
      */
     void developTech() {
         //Independent tech development
@@ -77,6 +95,23 @@ class Tile {
                 (3 * this.technology.woodwork - this.technology.metalwork - this.technology.husbandry - this.technology.warfare) / 20;
         this.technology.warfare += 
                 (3 * this.technology.warfare - this.technology.metalwork - this.technology.husbandry - this.technology.woodwork) / 20;
+    }
+
+    /**
+     * Causes the population of this tile to migrate to adjacent tiles
+     * Tiles could lose all of their population in a single iteration,
+     * given perfectly ideal circumstances
+     * TODO: make different cultures conflict with one another
+     */
+    void migrate() {
+        int migrationAmt = this.population / this.neighbors.length;
+        foreach(adj; this.neighbors) {
+            int newAmt = cast(int) (migrationAmt * (centerWeight(adj.temperature) + 1 - adj.topography + centerWeight(adj.humidity) / 3)
+                    * (1 - (adj.population / adj.getPopulationLimit())));
+            this.population -= newAmt;
+            adj.population += newAmt;
+            adj.technology.add(this.technology, cast(double) newAmt / cast(double) adj.population);
+        }
     }
 
     /**
