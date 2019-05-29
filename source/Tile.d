@@ -16,16 +16,16 @@ struct Technology {
      */
     void add(Technology other, double amount) {
         if(this.metalwork < other.metalwork) {
-            this.metalwork = amount * (other.metalwork - this.metalwork)
+            this.metalwork = amount * (other.metalwork - this.metalwork);
         }
         if(this.husbandry < other.husbandry) {
-            this.husbandry = amount * (other.husbandry - this.husbandry)
+            this.husbandry = amount * (other.husbandry - this.husbandry);
         }
         if(this.woodwork < other.woodwork) {
-            this.woodwork = amount * (other.woodwork - this.woodwork)
+            this.woodwork = amount * (other.woodwork - this.woodwork);
         }
         if(this.warfare < other.warfare) {
-            this.warfare = amount * (other.warfare - this.warfare)
+            this.warfare = amount * (other.warfare - this.warfare);
         }
     }
 
@@ -45,6 +45,7 @@ class Tile {
     double temperature; ///The temperature of the tile; higher value means warmer
 
     int population; ///The population on the tile
+    int incomingPopulation; ///Any population about to be addedn from migration; ensures that new population will not migrate
     int culture; ///The culture of the tile
     Technology technology; ///The technology of the tile
 
@@ -63,8 +64,8 @@ class Tile {
      * and technology
      */
     int getPopulationLimit() {
-        return (10 + this.technology.metalwork / 2 + this.technology.husbandry + this.technology.woodwork / 2) 
-                * (centerWeight(this.temperature) + 1 - this.elevation + centerWeight(this.humidity)));
+        return cast(int) ((10 + this.technology.metalwork / 2 + this.technology.husbandry + this.technology.woodwork / 2) 
+                * (centerWeight(this.temperature) + 1 - this.topography + centerWeight(this.humidity)));
     }
 
     /**
@@ -72,8 +73,9 @@ class Tile {
      * and other factors; grows in a logistic fashion
      */
     void growPopulation() {
-        this.population += (this.temperature + 1 - this.elevation + this.humidity) 
-                * (cast(double) this.population / this.getPopulationLimit()) * (this.getPopulationLimit() - this.population);
+        this.population += cast(int) ((1 + this.technology.metalwork / 2 + this.technology.husbandry + this.technology.woodwork / 2) 
+                * (this.temperature + 1 - this.topography + this.humidity) 
+                * (cast(double) this.population / this.getPopulationLimit()) * (this.getPopulationLimit() - this.population));
     }
 
     /**
@@ -108,8 +110,8 @@ class Tile {
         foreach(adj; this.neighbors) {
             int newAmt = cast(int) (migrationAmt * (centerWeight(adj.temperature) + 1 - adj.topography + centerWeight(adj.humidity) / 3)
                     * (1 - (adj.population / adj.getPopulationLimit())));
-            this.population -= newAmt;
-            adj.population += newAmt;
+            this.incomingPopulation -= newAmt; //Negative incoming population represents net loss of people
+            adj.incomingPopulation += newAmt;
             adj.technology.add(this.technology, cast(double) newAmt / cast(double) adj.population);
         }
     }
@@ -119,6 +121,23 @@ class Tile {
      */
     double centerWeight(double input) {
         return 4 * (input * input + input);
+    }
+
+    /**
+     * Runs all necessary operations for the tile for a single iteration
+     */
+    void runIteration() {
+        this.growPopulation();
+        this.developTech();
+    }
+
+    /**
+     * Finalizes an iteration
+     * Adds incoming population to the population
+     */
+    void finalizeIteration() {
+        this.population += this.incomingPopulation;
+        this.incomingPopulation = 0;
     }
 
 }
